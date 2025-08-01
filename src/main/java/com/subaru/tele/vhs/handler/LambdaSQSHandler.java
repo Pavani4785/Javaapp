@@ -56,4 +56,6 @@ public class LambdaSQSHandler implements RequestHandler<SQSEvent, String> {
 
         return "";
     }
+}
+}
 
