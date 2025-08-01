@@ -1,0 +1,35 @@
+name: Deploy Java App to EC2 (No Docker, No ECR)
+ 
+on:
+  push:
+    branches:
+      - main
+ 
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+ 
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+ 
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+ 
+    - name: Build with Gradle
+      run: ./gradlew clean build
+ 
+    - name: Upload artifact to S3
+      env:
+        AWS_REGION: us-east-1
+        S3_BUCKET: ecsbucket76478
+      run: |
+        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws configure set default.region $AWS_REGION
+ 
+        JAR_FILE=$(find build/libs -name "*.jar" | head -n 1)
+        aws s3 cp "$JAR_FILE" s3://$S3_BUCKET/app.jar
