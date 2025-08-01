@@ -1,7 +1,7 @@
 name: Build & Test Repo
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
