@@ -1,39 +1,56 @@
-name: Deploy Java App to EC2 (No Docker, No ECR)
- 
+name: Build & Test Repo
+
 on:
-  push:
+  pull_request:
     branches:
       - main
- 
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Dev environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - pre-prod
+          - prod
+      run_tests:
+        description: 'Run unit and integration tests'
+        required: false
+        type: boolean
+        default: true
+
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
- 
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
- 
-    - name: Set up JDK 21
-      uses: actions/setup-java@v4
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
       with:
         java-version: '21'
         distribution: 'temurin'
- 
-    - name: Make Gradle wrapper executable
-      run: chmod +x gradlew
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.gradle/caches
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
 
     - name: Build with Gradle
-      run: ./gradlew clean build
+      run: ./gradlew build
 
- 
-    - name: Upload artifact to S3
-      env:
-        AWS_REGION: us-east-1
-        S3_BUCKET: ecsbucket76478
-      run: |
-        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws configure set default.region $AWS_REGION
- 
-        JAR_FILE=$(find build/libs -name "*.jar" | head -n 1)
-        aws s3 cp "$JAR_FILE" s3://$S3_BUCKET/app.jar
+    - name: Run tests
+      if: ${{ inputs.run_tests == 'true' }}
+      run: ./gradlew test
+
+  #reusable-workflow:
+   # uses: subaruofamerica/cv-cicd-workflows/.github/workflows/gradle-build.yaml@main
+    # Removed the empty 'with' block as it is invalid
+    #secrets: inherit
